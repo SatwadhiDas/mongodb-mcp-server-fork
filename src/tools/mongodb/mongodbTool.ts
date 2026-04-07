@@ -17,6 +17,10 @@ export abstract class MongoDBToolBase extends ToolBase {
     protected server?: Server;
     static category: ToolCategory = "mongodb";
 
+    protected getMaxTimeMSOption(): { maxTimeMS: number } | Record<string, never> {
+        return this.config.maxTimeMs ? { maxTimeMS: this.config.maxTimeMs } : {};
+    }
+
     protected async ensureConnected(): Promise<NodeDriverServiceProvider> {
         if (!this.session.isConnectedToMongoDB) {
             if (this.session.connectedAtlasCluster) {

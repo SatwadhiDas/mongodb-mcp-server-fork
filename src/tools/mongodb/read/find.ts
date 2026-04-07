@@ -79,6 +79,7 @@ Note to LLM: If the entire query result is required, use the "export" tool inste
                 limit: limitOnFindCursor.limit,
                 sort,
                 signal,
+                ...this.getMaxTimeMSOption(),
             });
 
             const [queryResultsCount, cursorResults] = await Promise.all([

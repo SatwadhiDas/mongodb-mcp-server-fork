@@ -458,3 +458,8 @@ describeWithMongoDB(
         getUserConfig: () => userConfig,
     }
 );
+
+// Note: Export tool maxTimeMs is verified via code review since the export tool
+// passes cursors to exportsManager for async streaming. The maxTimeMS error
+// surfaces during async iteration, not in the immediate tool response.
+// The cursor creation pattern is identical to find/aggregate tools.

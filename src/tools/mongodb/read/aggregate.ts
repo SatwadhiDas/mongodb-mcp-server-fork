@@ -124,6 +124,7 @@ Note to LLM: If the entire aggregation result is required, use the "export" tool
                 // This is a write pipeline, so special-case it and don't attempt to apply limits or caps
                 aggregationCursor = provider.aggregate(database, collection, pipeline, {
                     signal,
+                    ...this.getMaxTimeMSOption(),
                 });
 
                 documents = await aggregationCursor.toArray();
@@ -135,6 +136,7 @@ Note to LLM: If the entire aggregation result is required, use the "export" tool
                 }
                 aggregationCursor = provider.aggregate(database, collection, cappedResultsPipeline, {
                     signal,
+                    ...this.getMaxTimeMSOption(),
                 });
 
                 const [totalDocuments, cursorResults] = await Promise.all([

@@ -453,6 +453,85 @@ describeWithMongoDB(
     }
 );
 
+describeWithMongoDB(
+    "find tool with maxTimeMs configured",
+    (integration) => {
+        beforeEach(async () => {
+            await freshInsertDocuments({
+                collection: integration.mongoClient().db(integration.randomDbName()).collection("foo"),
+                count: 10,
+            });
+        });
+
+        it("should terminate a slow query when maxTimeMs is exceeded", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "find",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "foo",
+                    filter: {
+                        $where: "function() { sleep(500); return true; }",
+                    },
+                },
+            });
+            const content = getResponseContent(response);
+            // 10 docs x 500ms sleep = 5s total, which exceeds 1000ms maxTimeMs
+            expect(content).toMatch(/exceeded time limit|MaxTimeMSExpired|Error running find/i);
+        });
+
+        it("should allow fast queries to complete normally", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "find",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "foo",
+                    filter: { value: 5 },
+                },
+            });
+            const content = getResponseContent(response);
+            expect(content).toContain('Query on collection "foo" resulted in 1 documents.');
+        });
+    },
+    {
+        getUserConfig: () => ({ ...defaultTestConfig, maxTimeMs: 1000 }),
+    }
+);
+
+describeWithMongoDB(
+    "find tool with maxTimeMs disabled (0)",
+    (integration) => {
+        beforeEach(async () => {
+            await freshInsertDocuments({
+                collection: integration.mongoClient().db(integration.randomDbName()).collection("foo"),
+                count: 5,
+            });
+        });
+
+        it("should not terminate slow queries when maxTimeMs is 0", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "find",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "foo",
+                    filter: {
+                        $where: "function() { sleep(200); return true; }",
+                    },
+                },
+            });
+            const content = getResponseContent(response);
+            // With maxTimeMs=0, the query runs without time limit and succeeds
+            expect(content).toContain('Query on collection "foo"');
+            expect(content).not.toMatch(/Error/i);
+        });
+    },
+    {
+        getUserConfig: () => ({ ...defaultTestConfig, maxTimeMs: 0 }),
+    }
+);
+
 describeWithMongoDB("find tool with abort signal", (integration) => {
     beforeEach(async () => {
         // Insert many documents with complex data to simulate a slow query

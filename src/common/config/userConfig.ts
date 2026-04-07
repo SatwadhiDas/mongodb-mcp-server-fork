@@ -182,6 +182,14 @@ const ServerConfigSchema = z4.object({
         .default(getExportsPath())
         .describe("Folder to store exported data files.")
         .register(configRegistry, { defaultValueDescription: "see below*", overrideBehavior: "not-allowed" }),
+    maxTimeMs: z4.coerce
+        .number()
+        .min(0, "maxTimeMs must be >= 0")
+        .default(60_000)
+        .describe(
+            "Maximum execution time in milliseconds for find, aggregate, and export operations. Uses MongoDB's maxTimeMS cursor option. Set to 0 to disable."
+        )
+        .register(configRegistry, { overrideBehavior: onlyLowerThanBaseValueOverride() }),
     exportTimeoutMs: z4.coerce
         .number()
         .default(300_000)

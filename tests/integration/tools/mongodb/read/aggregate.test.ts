@@ -1122,3 +1122,41 @@ describeWithMongoDB(
         },
     }
 );
+
+describeWithMongoDB(
+    "aggregate tool with maxTimeMs configured",
+    (integration) => {
+        beforeEach(async () => {
+            await freshInsertDocuments({
+                collection: integration.mongoClient().db(integration.randomDbName()).collection("people"),
+                count: 10,
+                documentMapper: (index) => ({ name: `Person${index}`, age: index * 5 }),
+            });
+        });
+
+        // Note: We cannot test aggregate timeout via $function+sleep() because MongoDB's
+        // JS engine does not respect maxTimeMS interrupt points during JS execution.
+        // maxTimeMS IS correctly applied (verified via mongosh provider source: options
+        // are passed directly to collection.aggregate(pipeline, options)) and will work
+        // for real-world slow aggregations (large scans, unindexed sorts, etc.).
+        // The find tool's $where+sleep test proves maxTimeMS works at the driver level.
+
+        it("should allow aggregations to complete normally with maxTimeMs set", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "aggregate",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "people",
+                    pipeline: [{ $match: { age: { $gt: 10 } } }],
+                },
+            });
+            const content = getResponseContent(response);
+            expect(content).toContain("The aggregation resulted in");
+            expect(content).not.toMatch(/Error/i);
+        });
+    },
+    {
+        getUserConfig: () => ({ ...defaultTestConfig, maxTimeMs: 30_000 }),
+    }
+);
