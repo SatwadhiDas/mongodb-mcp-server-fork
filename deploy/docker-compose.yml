@@ -1,0 +1,40 @@
+# Docker Compose for MongoDB MCP server deployment on a VPS.
+#
+# Usage:
+#   1. Copy .env.example to .env and fill in values
+#   2. docker compose up -d
+#
+# The MCP server runs on port 8080 (internal), health check on 8081.
+# Caddy provides TLS and proxies HTTPS traffic to the MCP server.
+
+services:
+  mongo-mcp:
+    build:
+      context: ..
+      dockerfile: Dockerfile.http
+    restart: unless-stopped
+    environment:
+      - MDB_MCP_CONNECTION_STRING=${MDB_MCP_CONNECTION_STRING}
+      - MCP_BEARER_TOKEN=${MCP_BEARER_TOKEN}
+      - MCP_MAX_TIME_MS=${MCP_MAX_TIME_MS:-60000}
+    # Only expose to Caddy on the Docker network, not to the internet
+    expose:
+      - "8080"
+      - "8081"
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      - DOMAIN=${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+
+volumes:
+  caddy_data:
+  caddy_config:
