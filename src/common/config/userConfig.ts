@@ -187,7 +187,7 @@ const ServerConfigSchema = z4.object({
         .min(0, "maxTimeMs must be >= 0")
         .default(60_000)
         .describe(
-            "Maximum execution time in milliseconds for find, aggregate, and export operations. Uses MongoDB's maxTimeMS cursor option. Set to 0 to disable."
+            "Maximum execution time in milliseconds for find, aggregate, export, count, collection-schema, collection-storage-size, db-stats, and explain operations. Uses MongoDB's maxTimeMS cursor/command option. Set to 0 to disable."
         )
         .register(configRegistry, { overrideBehavior: onlyLowerThanBaseValueOverride() }),
     exportTimeoutMs: z4.coerce

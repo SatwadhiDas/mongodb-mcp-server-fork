@@ -30,6 +30,7 @@ export class DbStatsTool extends MongoDBToolBase {
             {
                 dbStats: 1,
                 scale: 1,
+                ...(this.config.maxTimeMs ? { maxTimeMS: this.config.maxTimeMs } : {}),
             },
             { signal }
         );

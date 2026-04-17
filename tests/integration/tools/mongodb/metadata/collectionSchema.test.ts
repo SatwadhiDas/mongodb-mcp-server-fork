@@ -8,12 +8,14 @@ import {
     validateThrowsForInvalidArguments,
     databaseCollectionInvalidArgs,
     getDataFromUntrustedContent,
+    defaultTestConfig,
 } from "../../../helpers.js";
 import type { Document } from "bson";
 import type { OptionalId } from "mongodb";
 import type { SimplifiedSchema } from "mongodb-schema";
 import type { CollectionSchemaOutput } from "../../../../../src/tools/mongodb/metadata/collectionSchema.js";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
+import { freshInsertDocuments } from "../read/find.test.js";
 
 describeWithMongoDB("collectionSchema tool", (integration) => {
     validateToolMetadata(integration, "collection-schema", "Describe the schema for a collection", "metadata", [
@@ -174,3 +176,32 @@ describeWithMongoDB("collectionSchema tool", (integration) => {
         };
     });
 });
+
+describeWithMongoDB(
+    "collectionSchema tool with maxTimeMs configured",
+    (integration) => {
+        beforeEach(async () => {
+            await freshInsertDocuments({
+                collection: integration.mongoClient().db(integration.randomDbName()).collection("foo"),
+                count: 5000,
+            });
+        });
+
+        it("should terminate the $sample aggregation with MaxTimeMSExpired when maxTimeMs is exceeded", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "collection-schema",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "foo",
+                    sampleSize: 5000,
+                },
+            });
+            const content = getResponseContent(response);
+            expect(content).toMatch(/MaxTimeMSExpired|exceeded time limit/i);
+        });
+    },
+    {
+        getUserConfig: () => ({ ...defaultTestConfig, maxTimeMs: 1 }),
+    }
+);

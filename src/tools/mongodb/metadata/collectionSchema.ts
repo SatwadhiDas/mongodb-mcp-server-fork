@@ -45,6 +45,7 @@ export class CollectionSchemaTool extends MongoDBToolBase {
             [{ $sample: { size: Math.min(sampleSize, MAXIMUM_SAMPLE_SIZE_HARD_LIMIT) } }],
             {
                 signal,
+                ...this.getMaxTimeMSOption(),
             }
         );
         const { documents } = await collectCursorUntilMaxBytesLimit({

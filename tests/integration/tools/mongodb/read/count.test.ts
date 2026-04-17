@@ -6,6 +6,7 @@ import {
     validateToolMetadata,
     validateThrowsForInvalidArguments,
     expectDefined,
+    defaultTestConfig,
 } from "../../../helpers.js";
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Client } from "@modelcontextprotocol/sdk/client";
@@ -202,3 +203,32 @@ describeWithMongoDB("count tool with abort signal", (integration) => {
         expect(content).toContain('Found 0 documents in the collection "abort_collection" that matched the query.');
     });
 });
+
+describeWithMongoDB(
+    "count tool with maxTimeMs configured",
+    (integration) => {
+        beforeEach(async () => {
+            await freshInsertDocuments({
+                collection: integration.mongoClient().db(integration.randomDbName()).collection("foo"),
+                count: 5000,
+            });
+        });
+
+        it("should terminate a slow count with MaxTimeMSExpired when maxTimeMs is exceeded", async () => {
+            await integration.connectMcpClient();
+            const response = await integration.mcpClient().callTool({
+                name: "count",
+                arguments: {
+                    database: integration.randomDbName(),
+                    collection: "foo",
+                    query: {}, // unfiltered count over 5k docs with maxTimeMs=1 must trip
+                },
+            });
+            const content = getResponseContent(response);
+            expect(content).toMatch(/MaxTimeMSExpired|exceeded time limit/i);
+        });
+    },
+    {
+        getUserConfig: () => ({ ...defaultTestConfig, maxTimeMs: 1 }),
+    }
+);

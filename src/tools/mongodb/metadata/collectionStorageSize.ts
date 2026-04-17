@@ -33,6 +33,7 @@ export class CollectionStorageSizeTool extends MongoDBToolBase {
                 ],
                 {
                     signal,
+                    ...this.getMaxTimeMSOption(),
                 }
             )
             .toArray()) as [{ value: number }];

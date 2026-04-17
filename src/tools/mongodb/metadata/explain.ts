@@ -108,6 +108,7 @@ export class ExplainTool extends MongoDBToolBase {
                             query,
                         },
                         verbosity,
+                        ...(this.config.maxTimeMs ? { maxTimeMS: this.config.maxTimeMs } : {}),
                     },
                     {
                         signal,
