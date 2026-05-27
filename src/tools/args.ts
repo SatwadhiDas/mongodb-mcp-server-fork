@@ -82,6 +82,39 @@ function toEJSON<T extends object | undefined>(value: T): T {
     return EJSON.deserialize(value, { relaxed: false }) as T;
 }
 
+// Many MCP clients (including Anthropic tool-use bridged through opencode/litellm)
+// serialise structured tool-call arguments to JSON strings rather than passing the
+// object through verbatim. Zod's object check runs BEFORE `.transform(toEJSON)`,
+// so without preprocessing those calls fail with
+// `Expected object, received string` and the tool is unusable. Parse a string
+// argument as EJSON first; pass everything else through unchanged so existing
+// object-shaped calls keep working.
+function preParseEJSON(value: unknown): unknown {
+    if (typeof value !== "string") return value;
+    const trimmed = value.trim();
+    if (!trimmed) return value;
+    const first = trimmed[0];
+    if (first !== "{" && first !== "[") return value;
+    try {
+        return EJSON.parse(trimmed, { relaxed: true });
+    } catch {
+        return value;
+    }
+}
+
 export function zEJSON(): z.AnyZodObject {
-    return z.object({}).passthrough().transform(toEJSON) as unknown as z.AnyZodObject;
+    return z.preprocess(
+        preParseEJSON,
+        z.object({}).passthrough().transform(toEJSON)
+    ) as unknown as z.AnyZodObject;
+}
+
+// Companion helper for array-typed arguments (e.g. aggregate.pipeline,
+// insertMany.documents). Same string→array coercion as zEJSON does for objects.
+export function zEJSONArray<T extends z.ZodTypeAny>(item: T): z.ZodEffects<z.ZodArray<T>, z.infer<T>[], unknown> {
+    return z.preprocess(preParseEJSON, z.array(item)) as unknown as z.ZodEffects<
+        z.ZodArray<T>,
+        z.infer<T>[],
+        unknown
+    >;
 }

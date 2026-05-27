@@ -13,6 +13,7 @@ import { operationWithFallback } from "../../../helpers/operationWithFallback.js
 import { AGG_COUNT_MAX_TIME_MS_CAP, ONE_MB, CURSOR_LIMITS_TO_LLM_TEXT } from "../../../helpers/constants.js";
 import { LogId } from "../../../common/logging/index.js";
 import { AnyAggregateStage, VectorSearchStage } from "../mongodbSchemas.js";
+import { zEJSONArray } from "../../args.js";
 import {
     assertVectorSearchFilterFieldsAreIndexed,
     type SearchIndex,
@@ -46,7 +47,9 @@ If the user has asked for lexical/Atlas search, use \`$search\` instead of \`$te
 `;
 
 export const AggregateArgs = {
-    pipeline: z.array(z.union([VectorSearchStage, AnyAggregateStage])).describe(pipelineDescriptionWithVectorSearch),
+    pipeline: zEJSONArray(z.union([VectorSearchStage, AnyAggregateStage])).describe(
+        pipelineDescriptionWithVectorSearch
+    ),
 };
 
 export class AggregateTool extends MongoDBToolBase {

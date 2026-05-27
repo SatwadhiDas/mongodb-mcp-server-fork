@@ -153,14 +153,20 @@ const ServerConfigSchema = z4.object({
             "Maximum size of the HTTP request body in bytes (only used when transport is 'http'). This value is passed as the optional limit parameter to the Express.js json() middleware."
         )
         .register(configRegistry, { overrideBehavior: "not-allowed" }),
+    // Bumped from 10 min → 4 h. The override policy below (`onlyLowerThanBaseValueOverride`)
+    // means CLI/env overrides can only LOWER this, not raise it — so the only knob that
+    // matters for the default is this value here. Conversational MCP sessions routinely
+    // idle for 10–60 minutes between calls (model thinking, human pauses, multi-turn
+    // approval gates); a 10 min cutoff forced a reconnect on almost every real workflow.
     idleTimeoutMs: z4.coerce
         .number()
-        .default(600_000)
+        .default(14_400_000)
         .describe("Idle timeout for a client to disconnect (only applies to http transport).")
         .register(configRegistry, { overrideBehavior: onlyLowerThanBaseValueOverride() }),
+    // Notification is sent ~1 min before the idle abort. Keep the same ratio as before.
     notificationTimeoutMs: z4.coerce
         .number()
-        .default(540_000)
+        .default(13_500_000)
         .describe("Notification timeout for a client to be aware of disconnect (only applies to http transport).")
         .register(configRegistry, { overrideBehavior: onlyLowerThanBaseValueOverride() }),
     maxBytesPerQuery: z4.coerce

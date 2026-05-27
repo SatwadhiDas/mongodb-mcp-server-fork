@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { DbOperationArgs, MongoDBToolBase } from "../mongodbTool.js";
 import { type ToolArgs, type OperationType, formatUntrustedData, type ToolResult } from "../../tool.js";
-import { zEJSON } from "../../args.js";
+import { zEJSON, zEJSONArray } from "../../args.js";
 import { type Document } from "bson";
 
 const InsertManyOutputSchema = {
@@ -19,11 +19,9 @@ export class InsertManyTool extends MongoDBToolBase {
         "Insert an array of documents into a MongoDB collection. If the list of documents is above com.mongodb/maxRequestPayloadBytes, consider inserting them in batches.";
     public argsShape = {
         ...DbOperationArgs,
-        documents: z
-            .array(zEJSON().describe("An individual MongoDB document"))
-            .describe(
-                "The array of documents to insert, matching the syntax of the document argument of db.collection.insertMany()."
-            ),
+        documents: zEJSONArray(zEJSON().describe("An individual MongoDB document")).describe(
+            "The array of documents to insert, matching the syntax of the document argument of db.collection.insertMany()."
+        ),
     };
     public override outputSchema = InsertManyOutputSchema;
     static operationType: OperationType = "create";
